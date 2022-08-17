@@ -73,18 +73,19 @@ def read_csv():
         csv_reader = csv.reader(csv_file, delimiter=',')
         line_count = 0
 
+        x = PrettyTable()
+        x.field_names = ["Id","Date", "Account", "Description", "Amount"]
+
         for row in csv_reader:
 
-            if line_count == 0:
-                row.insert(0, 'id')
-            else:
+            if line_count > 0:
                 row.insert(0, line_count)
 
-            print(row)
+                x.add_row(row)
 
             line_count += 1
 
-        csv_file.close()
+        print(x)
 
 
 def create_new_file(date, account, description, amount):
