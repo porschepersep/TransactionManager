@@ -41,16 +41,16 @@ def print_statement():
     x = PrettyTable()
     x.field_names = ["Date", "Account", "Description", "Amount", "Balance"]
 
-    csv_content = get_csv_contents()
     for account in accounts:
 
         if str(current_account) == str(selected_account):
             print(f'\n\nYou selected to print a statement for the "{account}" account.')
 
+            csv_content2 = get_csv_contents()
             current_bal = 0
-            for row in csv_content:
+            for row in csv_content2:
 
-                # print(row[1])
+                print(row)
 
                 if row_count > 0 and row[1] == account:
                     current_bal = float(current_bal) + float(row[3])
@@ -119,7 +119,7 @@ def add_to_csv(date, description, amount, account_name):
     # This will print to the command line
     print('add_to_csv function was called!')
     previous_rows = []
-    contents_list = list(get_csv_contents())
+    contents_list = list(get_csv_contents()) if exists('transactions.csv') else []
     is_file_empty = len(contents_list) == 0
 
     if not exists('transactions.csv') or is_file_empty:
@@ -145,7 +145,6 @@ def add_to_csv(date, description, amount, account_name):
             transactions_file.close()
 
             read_csv()
-
 
 def ask_date_question():
     # This will set the date variable
