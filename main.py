@@ -1,5 +1,6 @@
 import csv
 import pprint
+from prettytable import PrettyTable
 
 # This is a sample Python script.
 
@@ -10,6 +11,59 @@ import shutil
 from os.path import exists
 from tempfile import NamedTemporaryFile
 
+
+def print_statement():
+
+    csv_content = get_csv_contents()
+
+    accounts = []
+
+    row_count = 0
+    for row in csv_content:
+
+        if row_count > 0 and row[1] not in accounts:
+            accounts.append(row[1])
+
+        row_count += 1
+
+    string_to_print_in_input = ''
+
+    current_account = 0
+    for account in accounts:
+        string_to_print_in_input += f'\n{current_account}) {account}'
+
+        current_account += 1
+
+    selected_account = input(f'Select an account:\n{string_to_print_in_input}\n\nYour selection: ')
+
+    current_account = 0
+
+    x = PrettyTable()
+    x.field_names = ["Date", "Account", "Description", "Amount", "Balance"]
+
+    csv_content = get_csv_contents()
+    for account in accounts:
+
+        if str(current_account) == str(selected_account):
+            print(f'\n\nYou selected to print a statement for the "{account}" account.')
+
+            current_bal = 0
+            for row in csv_content:
+
+                # print(row[1])
+
+                if row_count > 0 and row[1] == account:
+                    current_bal = float(current_bal) + float(row[3])
+                    row.append(current_bal)
+                    x.add_row(row)
+
+                row_count += 1
+
+
+
+        current_account += 1
+
+    print(x)
 
 def read_csv():
     # This will print to the command line
@@ -52,12 +106,23 @@ def create_new_file(date, account, description, amount):
         read_csv()
 
 
+def get_csv_contents():
+    # This will print to the command line
+    # print('read_csv function was called!')
+    csv_file = open('transactions.csv')
+    csv_reader = csv.reader(csv_file, delimiter=',')
+
+    return csv_reader
+
+
 def add_to_csv(date, description, amount, account_name):
     # This will print to the command line
     print('add_to_csv function was called!')
     previous_rows = []
+    contents_list = list(get_csv_contents())
+    is_file_empty = len(contents_list) == 0
 
-    if not exists('transactions.csv'):
+    if not exists('transactions.csv') or is_file_empty:
         create_new_file(date, account_name, description, amount)
     else:
 
@@ -86,7 +151,7 @@ def ask_date_question():
     # This will set the date variable
     date = input('\n\nWhat is the date of your transaction (MM/DD/YYYY)? ')
 
-    valid = re.match(r"[0-1][0-9]\/[0-3][0-9]\/[1900-2022]", date)
+    valid = re.match(r"[0-1][0-9]\/[0-3][0-9]\/\d\d\d\d", date)
 
     if valid:
 
@@ -95,10 +160,10 @@ def ask_date_question():
     else:
 
         print(f'The value "{date}" is invalid. Please enter the date in this format MM/DD/YYYY.')
-        ask_date_question()
+        return ask_date_question()
 
 
-def ask_transaction_questions():
+def ask_transaction_questions(update=False):
     # This will set the date variable
     date = ask_date_question()
 
@@ -110,7 +175,8 @@ def ask_transaction_questions():
 
     # This will set the account variable
     account = input('\n\nWhat account does this transaction belong to?\na) Wells Fargo - Danny Jones' \
-                    '\nb) Chime - Porsche Jones\nc) Chime Credit Card - Porsche Jones\n\nYour option is: ')
+                    '\nb) Chime - Porsche Jones\nc) Chime Credit Card - Porsche Jones\nd) EBT - Porsche Jones'
+                    '\n\nYour option is: ')
 
     # This will set the account_name variable
     account_name = ''
@@ -121,11 +187,24 @@ def ask_transaction_questions():
         account_name = 'Chime - Porsche Jones'
     elif account == 'c':
         account_name = 'Chime Credit Card - Porsche Jones'
+    elif account == 'd':
+        account_name = 'EBT - Porsche Jones'
     else:
         account_name = 'You did not select an account that exists.'
 
+    word = 'input'
+
+    if update == True:
+
+        word = 'update'
+
     confirmation = input(
-        f'\n\nWould you like to input the following transaction? Yes or No?\n\ndate => {date}\ndescription => {description}\namount => {amount}\naccount => {account_name}\n\nMy answer is: ')
+        f'\n\nWould you like to {word} the following transaction?\n\n'
+        f'date => {date}\ndescription => {description}\n'
+        f'amount => {amount}\n'
+        f'account => {account_name}\n\n'
+        f''
+        f'yes or no: ')
 
     if confirmation == 'yes':
 
@@ -156,56 +235,102 @@ def add_a_transaction():
 
 def update_csv_row(selected_transaction, date, description, amount, account_name):
     # This will print to the command line
-    print('update_csv_row function was called!')
+    # print('update_csv_row function was called!')
 
-    tempfile = NamedTemporaryFile(mode='w', delete=False)
-    with open('transactions.csv') as csv_file:
+    csv_reader = get_csv_contents()
+    line_count = 0
+    new_file = []
+    for row in csv_reader:
 
+        if str(line_count) == selected_transaction:
+            new_file.append( {
+                'date': date,
+                'account': account_name,
+                'description': description,
+                'amount': amount
+            })
+        else:
+            new_file.append( {
+                'date': row[0],
+                'account': row[1],
+                'description': row[2],
+                'amount': row[3]
+            })
+        line_count += 1
+
+    with open('transactions.csv', mode='w', newline='') as transactions_file:
         fieldnames = ['date', 'account', 'description', 'amount']
-        csv_reader = csv.reader(csv_file, delimiter=',')
-        csv_writer = csv.DictWriter(tempfile, fieldnames=fieldnames)
-        line_count = 0
+        writer = csv.DictWriter(transactions_file, fieldnames=fieldnames)
 
-        for row in csv_reader:
-
-            if str(line_count) == selected_transaction:
-                csv_writer.writerow({
-                    'date': date,
-                    'account': account_name,
-                    'description': description,
-                    'amount': amount
+        for row in new_file:
+            writer.writerow({
+                    'date': row['date'],
+                    'account': row['account'],
+                    'description': row['description'],
+                    'amount': row['amount']
                 })
 
-                break
-            else:
-                csv_writer.writerow({
-                    'date': row[0],
-                    'account': row[1],
-                    'description': row[2],
-                    'amount': row[3]
-                })
-            line_count += 1
 
-    csv_file.close()
+        read_csv()
 
-    shutil.move(tempfile.name, 'transactions.csv')
+
+
+
+
+def get_transaction(selected_transaction):
+    csv_reader = get_csv_contents()
+    line_count = 0
+    for row in csv_reader:
+
+        if str(line_count) == selected_transaction:
+            return {
+                'date': row[0],
+                'account': row[1],
+                'description': row[2],
+                'amount': row[3]
+            }
+
+        line_count +=1
+
 
 def update_a_transaction():
-    print('update_a_transaction function was called!')
-    # Show the transactions
-    read_csv()
+    """
+    Updates a transaction
+    """
+    # print('update_a_transaction function was called!')
 
-    # Set a variable for a selected transaction
-    selected_transaction = input('\n\nWhat treansaction would you like to update?\n\nSelected transaction id: ')
+    contents_list = list(get_csv_contents())
+    is_file_empty = len(contents_list) == 1
 
-    data = ask_transaction_questions()
 
-    date = data['date']
-    description = data['description']
-    amount = data['amount']
-    account_name = data['account']
 
-    update_csv_row(selected_transaction,date,description,amount,account_name)
+    if not is_file_empty:
+        # Show the transactions
+        read_csv()
+
+        # Set a variable for a selected transaction
+        selected_transaction = input('\n\nWhat treansaction would you like to update?\n\nSelected transaction id: ')
+
+        retrieved_transaction = get_transaction(selected_transaction)
+
+        print(
+            f'\n\nWould you like to input the following transaction?\n\n'
+            f'date => {retrieved_transaction["date"]}\n'
+            f'description => {retrieved_transaction["description"]}\n'
+            f'amount => {retrieved_transaction["amount"]}\n'
+            f'account => {retrieved_transaction["account"]}')
+
+        data = ask_transaction_questions(update=True)
+
+        date = data['date']
+        description = data['description']
+        amount = data['amount']
+        account_name = data['account']
+
+        update_csv_row(selected_transaction, date, description, amount, account_name)
+    else:
+
+        print('You ain\'t got no damn transactions!!!!!')
 
 
 def delete_a_transaction():
@@ -216,7 +341,11 @@ def transaction_program():
     # Use a breakpoint in the code line below to debug your script.
     while_count = 0
     while True:
-        option = input('\n\nselect an option:\na) add a transaction\nb) update a transaction\nc) delete a transaction' \
+        option = input('\n\nselect an option:'
+                       '\na) add a transaction'
+                       '\nb) update a transaction'
+                       '\nc) delete a transaction' \
+                       '\nd) print statement' 
                        '\n\n\nmy option: ')
 
         if option == 'a':
@@ -228,6 +357,10 @@ def transaction_program():
         elif option == 'c':
             print('\n\nYou selected to delete a transaction')
             delete_a_transaction()
+        elif option == 'd':
+
+            print_statement()
+
         else:
             print(f'\n\nThere is no option for option {option}')
 
@@ -235,5 +368,5 @@ def transaction_program():
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     transaction_program()
- 
+
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
